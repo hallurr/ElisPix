@@ -1,12 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+import matplotlib.image
+import matplotlib.pyplot
 import cv2
 import os
 from scipy import ndimage
 import pathlib
 import tkinter as tk
-from tkinter import filedialog
+# from tkinter import filedialog
 
 
 def find_cutpoints(thresh, thresholddivider=200, percent_smear=0.00125, row_or_col='row'):
@@ -22,8 +22,8 @@ def find_cutpoints(thresh, thresholddivider=200, percent_smear=0.00125, row_or_c
     rowsum_orig = rowsum
     thresholdvalue = np.mean(rowsum)/thresholddivider
     loopflag = True
-    plt.close()
-    plt.figure()
+    matplotlib.pyplot.close()
+    matplotlib.pyplot.figure()
     cutvalue = 0
     while loopflag:
         # check if rowsum is all zeros or all nonzeros
@@ -175,12 +175,13 @@ def intricate_angle_finder(curr_thresh):
     return np.median(angles), angles
 
 
-def remove_white_border(img2):
+def remove_white_border(input_image):
     # Convert image to grayscale
-    gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    input_grayscale = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
 
     # Apply a binary threshold to create a mask of the non-white pixels
-    _, thresh3 = cv2.threshold(gray2, 250, 255, cv2.THRESH_BINARY_INV)
+    _, thresh3 = cv2.threshold(
+        input_grayscale, 250, 255, cv2.THRESH_BINARY_INV)
 
     threshold_divider = 200
     percent_smear = 0.005
@@ -223,12 +224,12 @@ class ImageProcessor:
                 f'Working on {pic_list[pic_index]}: {pic_index+1} of {len(pic_list)}')
 
             # Read in current pic as array
-            img = mpimg.imread(pic_list[pic_index])
+            img = matplotlib.image.imread(pic_list[pic_index])
 
             # Change to grayscale and apply threshold
-            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            image_grayscale = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
             ret, thresh = cv2.threshold(
-                gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+                image_grayscale, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
             # Find row cutpoints
             threshold_divider = 200
