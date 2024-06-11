@@ -157,3 +157,6 @@ cython_debug/
 # Environment
 .DS_Store
 myenv/*
+output/
+input/
+*.ipynb
