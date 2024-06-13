@@ -2,24 +2,64 @@ import numpy as np
 import matplotlib.image
 import matplotlib.pyplot
 import cv2
-import os
 import pathlib
+from scipy.optimize import minimize
 
-LOWER_WHITE = np.array([200, 200, 200])
-UPPER_WHITE = np.array([255, 255, 255])
-NEON_GREEN = np.array([0, 255, 127])
+
+SPLIT_THRESH = 200
+CORNER_THRESH = 235
+WHITE = 255
 PAD_RATIO = 0.1
 MIN_OBJECT_RATIO = 0.1
 
 
-def get_bounding_box(cnt):
-    rect = cv2.minAreaRect(cnt)
-    box = cv2.boxPoints(rect)
-    return cv2.boundingRect(np.int0(box))
+def get_boundary_values(img):
+    height, width = img.shape
+    top_half = img[:height//2, :]
+    lowermost_y_top_half = np.where(top_half != 0)[0].max()
+    bottom_half = img[height//2:, :]
+    topmost_y_bottom_half = np.where(bottom_half != 0)[0].min() + height//2
+    left_half = img[:, :width//2]
+    rightmost_x_left_half = np.where(left_half != 0)[1].max()
+    right_half = img[:, width//2:]
+    leftmost_x_right_half = np.where(right_half != 0)[1].min() + width//2
+    return lowermost_y_top_half, topmost_y_bottom_half, rightmost_x_left_half, leftmost_x_right_half
 
 
-def get_mask(img):
-    mask = cv2.inRange(img, LOWER_WHITE, UPPER_WHITE)
+def pixel_diff(angle, img):
+    try:
+        M = cv2.getRotationMatrix2D(
+            (img.shape[1] / 2, img.shape[0] / 2), angle[0], 1)
+        rotated_img = cv2.warpAffine(
+            img, M, (img.shape[1], img.shape[0]), borderValue=(255, 255, 255))
+        top, bottom, left, right = get_boundary_values(rotated_img)
+
+        pixel_sum_original = np.sum(img == 255)
+        pixel_sum_rotated = np.sum(rotated_img == 255)
+
+        if pixel_sum_rotated > pixel_sum_original:
+            return 1e4 * (pixel_sum_rotated - pixel_sum_original + 2)
+        return top + bottom + left + right
+    except Exception as e:
+        print(f"Error in pixel_diff: {e}")
+        return 1e9
+
+
+def optimal_rotation(mask):
+    result = minimize(pixel_diff, [-3], args=(mask,),  bounds=[(-45, 45)],
+                      options={'finite_diff_rel_step': 0.5, 'eps': 0.1})
+    if result.success:
+        return result.x[0]
+    else:
+        return 0
+
+
+def get_mask(img, lower_threshold, upper_threshold):
+    LOWER_THRESHOLD = np.array(
+        [lower_threshold, lower_threshold, lower_threshold])
+    UPPER_THRESHOLD = np.array(
+        [upper_threshold, upper_threshold, upper_threshold])
+    mask = cv2.inRange(img, LOWER_THRESHOLD, UPPER_THRESHOLD)
     mask = cv2.bitwise_not(mask)
     contours, _ = cv2.findContours(
         mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -27,13 +67,29 @@ def get_mask(img):
     filtered_contours = [cnt for cnt in contours if cv2.boundingRect(cnt)[
         2] >= min_width]
     mask = np.zeros_like(mask)
-    cv2.drawContours(mask, filtered_contours, -1, (255), thickness=cv2.FILLED)
+    cv2.drawContours(mask, filtered_contours, -1,
+                     (WHITE), thickness=cv2.FILLED)
     mask = cv2.bitwise_not(mask)
-    return filtered_contours, mask
+    return mask
+
+
+def get_contours(img, lower_threshold, upper_threshold):
+    LOWER_THRESHOLD = np.array(
+        [lower_threshold, lower_threshold, lower_threshold])
+    UPPER_THRESHOLD = np.array(
+        [upper_threshold, upper_threshold, upper_threshold])
+    mask = cv2.inRange(img, LOWER_THRESHOLD, UPPER_THRESHOLD)
+    mask = cv2.bitwise_not(mask)
+    contours, _ = cv2.findContours(
+        mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    min_width = MIN_OBJECT_RATIO * img.shape[1]
+    filtered_contours = [cnt for cnt in contours if cv2.boundingRect(cnt)[
+        2] >= min_width]
+    return filtered_contours
 
 
 def add_border(img, pad_height, pad_width):
-    return cv2.copyMakeBorder(img, pad_height, pad_height, pad_width, pad_width, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+    return cv2.copyMakeBorder(img, pad_height, pad_height, pad_width, pad_width, cv2.BORDER_CONSTANT, value=[WHITE, WHITE, WHITE])
 
 
 def create_rectangle(cnt):
@@ -47,58 +103,36 @@ def get_split_images(img):
     pad_height = int(height * PAD_RATIO)
     pad_width = int(width * PAD_RATIO)
     img = add_border(img, pad_height, pad_width)
-    contours, _ = get_mask(img)
-
+    contours = get_contours(img, SPLIT_THRESH, WHITE)
     rectangles = [cnt for cnt in contours if create_rectangle(
         cnt)[2] >= width * MIN_OBJECT_RATIO and create_rectangle(cnt)[3] >= height * MIN_OBJECT_RATIO]
-
     rectangle_coordinates = [(y - pad_height, y - pad_height + h, x - pad_width,
                               x - pad_width + w) for x, y, w, h in map(create_rectangle, rectangles)]
-
     return rectangle_coordinates
 
 
-def get_rotation_angle(coordinates, image_width, image_height):
-    x1, y1, x2, y2 = coordinates
-
-    if x2 < x1:
-        x1, y1, x2, y2 = x2, y2, x1, y1
-
-    dy = (y2 - y1) / image_height
-    dx = (x2 - x1) / image_width
-
-    rotation_angle = np.arctan(dy / dx)
-    rotation_angle_deg = np.degrees(rotation_angle)
-
-    if rotation_angle_deg >= 0:
-        minimal_rotation_angle = 90 - rotation_angle_deg
-    else:
-        minimal_rotation_angle = 90 + rotation_angle_deg
-
-    print('Coordinates:', coordinates, ', angle:', minimal_rotation_angle)
-    return minimal_rotation_angle
+def rotate_img(img, mask):
+    angle = optimal_rotation(mask)
+    M = cv2.getRotationMatrix2D(
+        (img.shape[1] / 2, img.shape[0] / 2), angle, 1)
+    rotated_img = cv2.warpAffine(
+        img, M, (img.shape[1], img.shape[0]), borderValue=(WHITE, WHITE, WHITE))
+    return rotated_img
 
 
-def rotate_image(image, coordinates):
-    # image, angle = get_strongest_side(image, mask)
-    angle = get_rotation_angle(coordinates, image.shape[1], image.shape[0])
+def crop_img(img):
+    for _ in range(4):
+        while np.all(img[0] >= CORNER_THRESH):
+            img = img[1:]
+        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    return img
 
-    image_size = (image.shape[1], image.shape[0])
-    image_center = tuple(np.array(image_size) / 2)
 
-    rotation_mat = cv2.getRotationMatrix2D(image_center, angle, 1)
-
-    abs_cos = abs(rotation_mat[0, 0])
-    abs_sin = abs(rotation_mat[0, 1])
-    bound_w = int(image_size[0] * abs_cos + image_size[1] * abs_sin)
-    bound_h = int(image_size[0] * abs_sin + image_size[1] * abs_cos)
-
-    rotation_mat[0, 2] += bound_w/2 - image_center[0]
-    rotation_mat[1, 2] += bound_h/2 - image_center[1]
-
-    rotated_image = cv2.warpAffine(
-        image, rotation_mat, (bound_w, bound_h), borderValue=([255, 255, 255]))
-    return rotated_image
+def get_current_image(image, coordinates):
+    y1, y2, x1, x2 = coordinates
+    image = cv2.cvtColor(
+        image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB)
+    return image
 
 
 class ImageProcessor:
@@ -118,23 +152,22 @@ class ImageProcessor:
             image_coordinates = get_split_images(img)
             print(f'Working on {pic}: {pic_index+1} of {len(pic_list)}')
             img = matplotlib.image.imread(pic)
-
-            # Loop through images
             for index, coordinates in enumerate(image_coordinates):
                 try:
-                    print(f'Working on {index+1} from {pic}')
-                    y1, y2, x1, x2 = coordinates
-                    curr_img = cv2.cvtColor(
-                        img[y1:y2, x1:x2], cv2.COLOR_BGR2RGB)
-                    filtered_contours, _ = get_mask(curr_img)
-                    # for contour in filtered_contours:
-                    #     x, y, w, h = cv2.boundingRect(contour)
-                    #     cv2.rectangle(curr_img, (x, y),
-                    #                   (x + w, y + h), (0, 255, 0), 10)
-                    # curr_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
+                    curr_image = get_current_image(img, coordinates)
+                    # cv2.imwrite(str(self.output_folder /
+                    #                f'{pic.stem}_{index+1}_original.png'), curr_image)
+                    curr_image = crop_img(curr_image)
+                    curr_mask = get_mask(curr_image, CORNER_THRESH, WHITE)
+                    curr_image = rotate_img(curr_image, curr_mask)
+                    curr_image = crop_img(curr_image)
                     cv2.imwrite(str(self.output_folder /
-                                f'{pic.stem}_{index+1}.png'), curr_img)
+                                    f'{pic.stem}_{index+1}.png'), curr_image)
                 except Exception as e:
                     print(f'Error with {index + 1} from {pic} : { e }')
                     continue
+
+
+if __name__ == "__main__":
+    image_processor = ImageProcessor('input', 'output')
+    image_processor.process_images()
