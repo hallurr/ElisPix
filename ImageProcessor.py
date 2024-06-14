@@ -5,7 +5,6 @@ import cv2
 import pathlib
 from scipy.optimize import minimize
 
-
 SPLIT_THRESH = 200
 CORNER_THRESH = 235
 WHITE = 255
@@ -13,42 +12,30 @@ PAD_RATIO = 0.1
 MIN_OBJECT_RATIO = 0.1
 
 
-def get_boundary_values(img):
-    height, width = img.shape
-    top_half = img[:height//2, :]
-    lowermost_y_top_half = np.where(top_half != 0)[0].max()
-    bottom_half = img[height//2:, :]
-    topmost_y_bottom_half = np.where(bottom_half != 0)[0].min() + height//2
-    left_half = img[:, :width//2]
-    rightmost_x_left_half = np.where(left_half != 0)[1].max()
-    right_half = img[:, width//2:]
-    leftmost_x_right_half = np.where(right_half != 0)[1].min() + width//2
-    return lowermost_y_top_half, topmost_y_bottom_half, rightmost_x_left_half, leftmost_x_right_half
-
-
 def pixel_diff(angle, img):
     try:
         M = cv2.getRotationMatrix2D(
             (img.shape[1] / 2, img.shape[0] / 2), angle[0], 1)
         rotated_img = cv2.warpAffine(
-            img, M, (img.shape[1], img.shape[0]), borderValue=(255, 255, 255))
-        top, bottom, left, right = get_boundary_values(rotated_img)
+            img, M, (img.shape[1], img.shape[0]), borderValue=(WHITE, WHITE, WHITE))
 
-        pixel_sum_original = np.sum(img == 255)
-        pixel_sum_rotated = np.sum(rotated_img == 255)
+        pixel_difference = np.sum(img == 0) - np.sum(rotated_img == 0)
+        if pixel_difference > 0:
+            return 1e4 * (pixel_difference)
 
-        if pixel_sum_rotated > pixel_sum_original:
-            return 1e4 * (pixel_sum_rotated - pixel_sum_original + 2)
-        return top + bottom + left + right
+        rotated_img = crop_img(rotated_img)
+        nonpixel_sum_rotated = np.sum(rotated_img == WHITE)
+        return nonpixel_sum_rotated
     except Exception as e:
         print(f"Error in pixel_diff: {e}")
         return 1e9
 
 
 def optimal_rotation(mask):
-    result = minimize(pixel_diff, [-3], args=(mask,),  bounds=[(-45, 45)],
-                      options={'finite_diff_rel_step': 0.5, 'eps': 0.1})
+    result = minimize(pixel_diff, [0.5], args=(mask,),  bounds=[(-45, 45)],
+                      options={'finite_diff_rel_step': 0.5, 'accuracy': 0.01, 'eps': 0.1})
     if result.success:
+        # print(result)
         return result.x[0]
     else:
         return 0
