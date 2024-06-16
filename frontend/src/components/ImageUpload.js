@@ -68,7 +68,6 @@ const styles = {
     height: "125px",
     border: "1px solid rgba(0, 0, 0, 0.3)",
     borderRadius: "5px",
-    marginBottom: "20px",
     fontSize: "medium",
     display: "flex",
     justifyContent: "space-between",

@@ -17,7 +17,7 @@ function ResultsHeader({ allImages, resetImages }) {
     allImages.length > 0 && (
       <div style={styles.container}>
         <div style={styles.leftHeader}>Results ({allImages.length})</div>
-        <div>
+        <div style={{ display: "flex" }}>
           <button onClick={resetImages} style={styles.resetButton}>
             Clear
           </button>
@@ -37,7 +37,7 @@ const styles = {
     textAlign: "left",
     padding: "8px 25px 8px 25px",
     color: "rgba(7, 13, 15, 1)",
-    textSize: "14px",
+    fontSize: "20px",
   },
   downloadButton: {
     marginLeft: "15px",

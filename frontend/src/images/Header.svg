@@ -5,17 +5,7 @@
       <stop offset="50%" style="stop-color:rgb(51, 161, 253);"/>
       <stop offset="75%" style="stop-color:rgb(253, 202, 64);"/>
     </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1"/>
-      <feOffset dx="2" dy="2" result="offsetblur"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.2"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+
   </defs>
   <text x="50%" y="50%" dy=".35em" text-anchor="middle" style="font: bold 40px sans-serif; fill: url(#gradient); filter: url(#shadow);" >
     elispix

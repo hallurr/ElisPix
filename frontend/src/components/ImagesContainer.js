@@ -34,9 +34,7 @@ const styles = {
     objectFit: "contain",
     maxWidth: "90%",
     maxHeight: "90%",
-    padding: "2px",
-    background:
-      "linear-gradient(to bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.95))",
+    boxShadow: "0px 0px 3px 3px rgba(0, 0, 0, 0.6)",
   },
   imageContainer: {
     padding: "15px",
@@ -44,8 +42,6 @@ const styles = {
     gridTemplateColumns: "repeat(5, 1fr)",
     gridTemplateRows: "auto",
     gridAutoFlow: "row",
-    gap: "20px",
-    marginBottom: "150px",
   },
   imgHolder: {
     position: "relative",
