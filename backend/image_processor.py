@@ -29,7 +29,22 @@ class ImageProcessor:
                     curr_image = cv2.cvtColor(curr_image, cv2.COLOR_BGR2RGB)
                     _, buffer = cv2.imencode('.png', curr_image)
                     b64_string = base64.b64encode(buffer).decode('utf-8')
-                    output_images.append(b64_string)
+
+                    # Create a thumbnail
+                    max_dimension = max(
+                        curr_image.shape[0], curr_image.shape[1])
+                    scale = 200 / max_dimension
+                    thumbnail = cv2.resize(
+                        curr_image, None, fx=scale, fy=scale)
+                    _, thumbnail_buffer = cv2.imencode('.png', thumbnail)
+                    thumbnail_b64_string = base64.b64encode(
+                        thumbnail_buffer).decode('utf-8')
+
+                    # Append a JSON object with "image" and "thumbnail" properties
+                    output_images.append({
+                        "image": b64_string,
+                        "thumbnail": thumbnail_b64_string
+                    })
                 except Exception as e:
                     print(f'Error with {index + 1} from {pic.filename} : {e}')
                     continue
