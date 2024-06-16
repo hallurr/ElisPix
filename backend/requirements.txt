@@ -2,3 +2,6 @@ numpy
 matplotlib
 opencv-python
 scipy
+Flask
+Flask-CORS
+Pillow
