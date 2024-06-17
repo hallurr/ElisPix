@@ -62,7 +62,7 @@ const styles = {
   image: {
     display: "block",
     position: "fixed",
-    zIndex: "1",
+    zIndex: 10,
     paddingTop: "100px",
     left: "0",
     top: "0",

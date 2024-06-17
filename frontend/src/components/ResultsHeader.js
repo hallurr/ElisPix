@@ -19,15 +19,12 @@ function ResultsHeader({ allImages, resetImages, setLoading }) {
   return (
     allImages.length > 0 && (
       <div style={styles.container}>
-        <div style={styles.leftHeader}>
-          <div style={styles.resultsTitle}>Results</div>
-          <div style={styles.resultsDescription}>
-            {allImages.length} images found
-          </div>
-        </div>
-        <div style={{ display: "flex" }}>
+        <div style={styles.leftHeader}></div>
+        <div style={{ display: "flex", gap: "10px" }}>
           <button onClick={resetImages} style={styles.resetButton}>
-            <div style={{ marginRight: "8px", color: "black" }}>Clear</div>
+            <div style={{ marginRight: "8px", color: "black" }}>
+              Clear results
+            </div>
             <img src={Clear} alt="Clear" />
           </button>
           <button
@@ -55,14 +52,7 @@ const styles = {
     textAlign: "left",
     padding: "8px 8px 8px 8px",
     color: "rgba(7, 13, 15, 1)",
-    fontSize: "20px",
     gap: "10px",
-  },
-  resultsTitle: {
-    textAlign: "left",
-    color: "rgba(7, 13, 15, 1)",
-    fontSize: "20px",
-    fontWeight: "bold",
   },
   resultsDescription: {
     textAlign: "left",
@@ -70,25 +60,23 @@ const styles = {
     fontSize: "14px",
   },
   downloadButton: {
-    marginLeft: "15px",
     padding: "8px 8px 8px 8px",
     border: "none",
     cursor: "pointer",
     backgroundColor: "rgba(51, 161, 253, 1)",
     borderRadius: "10px",
-    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
     color: "white",
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
   },
   resetButton: {
-    marginLeft: "15px",
     padding: "8px 15px 8px 15px",
     border: "none",
     cursor: "pointer",
-    background: "none",
+    background: "#e7e7e7",
     color: "white",
+    borderRadius: "10px",
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
@@ -97,11 +85,9 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    height: "100%",
-    width: "100%",
     padding: "15px 0px 15px 0px",
-    borderBottom: "0.5px solid black",
     position: "relative",
-    //backgroundColor: "orange",
+    backgroundColor: "white",
+    width: "100%",
   },
 };
