@@ -6,6 +6,7 @@ import {
   PointerSensor,
 } from "@dnd-kit/core";
 import callAPI from "../helpers/api";
+import Upload from "./../images/Upload.svg";
 
 function ImageUpload({ setAllImages, setIsLoading }) {
   const fileInputRef = React.useRef();
@@ -32,7 +33,10 @@ function ImageUpload({ setAllImages, setIsLoading }) {
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
             style={styles.fileButton}
           >
-            <b>Choose a file</b> or drag it here
+            <img src={Upload} alt="Upload" style={{ height: "30px" }} />
+            <div>
+              <b>Choose a file</b> or drag it here
+            </div>
           </button>
           <input
             style={styles.fileInput}
@@ -56,25 +60,28 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    width: "50%",
+    height: "30%",
+    width: "100%",
   },
   contentDnd: {
+    display: "flex",
     width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
   imageUpload: {
-    width: "100%",
-    height: "125px",
-    border: "1px solid rgba(0, 0, 0, 0.3)",
+    display: "flex",
+    border: "2px dotted rgba(0, 0, 0, 0.15)",
     borderRadius: "5px",
     fontSize: "medium",
-    display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
     background: "white",
+    width: "100%",
+    height: "100%",
   },
   fileButton: {
+    display: "flex",
     boxSizing: "border-box",
     appearance: "none",
     WebkitAppearance: "none",
@@ -85,6 +92,11 @@ const styles = {
     width: "calc(100% - 30px)",
     height: "calc(100%)",
     cursor: "pointer",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "15px",
+    padding: "10px",
   },
   fileInput: {
     display: "none",

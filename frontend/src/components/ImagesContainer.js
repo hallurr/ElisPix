@@ -32,24 +32,26 @@ export default ImagesContainer;
 const styles = {
   thumbnail: {
     objectFit: "contain",
-    maxWidth: "90%",
-    maxHeight: "90%",
     boxShadow: "0px 0px 3px 3px rgba(0, 0, 0, 0.6)",
   },
   imageContainer: {
-    padding: "15px",
     display: "grid",
     gridTemplateColumns: "repeat(5, 1fr)",
     gridTemplateRows: "auto",
     gridAutoFlow: "row",
+    gap: "10px",
+    margin: "20px 40px 20px 40px",
+    height: "calc(100vh - 350px)",
+    width: "100%",
+    overflow: "auto",
+    alignItems: "flex-start",
   },
   imgHolder: {
     position: "relative",
-    maxHeight: "20vh",
-    maxWidth: "30vh",
-    overflow: "hidden",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: "10px",
+    marginBottom: "10px",
   },
 };

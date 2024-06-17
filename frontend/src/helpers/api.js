@@ -1,5 +1,5 @@
 const callAPI = ({ setAllImages, setIsLoading }) => {
-  setIsLoading(true);
+  setIsLoading({ loading: true, text: "Processing images ..." });
   setAllImages([]);
   const formData = new FormData();
   const images = document.getElementById("image-input").files;
@@ -15,10 +15,10 @@ const callAPI = ({ setAllImages, setIsLoading }) => {
     .then((response) => response.json())
     .then((data) => {
       setAllImages(data.images);
-      setIsLoading(false);
+      setIsLoading({ loading: false, text: "" });
     })
     .catch(() => {
-      setIsLoading(false);
+      setIsLoading({ loading: false, text: "" });
     });
 };
 

@@ -14,9 +14,15 @@ function Image({ selectedImage, setSelectedImage }) {
     };
   }, []);
 
+  const handleClick = (event) => {
+    if (event.target === event.currentTarget) {
+      setSelectedImage(null);
+    }
+  };
+
   return (
     selectedImage && (
-      <div style={styles.image}>
+      <div style={styles.image} onClick={handleClick}>
         <span style={styles.close} onClick={() => setSelectedImage(null)}>
           &times;
         </span>
