@@ -6,9 +6,8 @@ function ImagesContainer({ displayedImages }) {
   return (
     <div
       style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
+        width: "90%",
+        margin: "0 auto",
       }}
     >
       <div style={styles.resultsTitle}>Results ({displayedImages.length})</div>
@@ -43,22 +42,21 @@ const styles = {
     textAlign: "left",
     color: "rgba(7, 13, 15, 1)",
     fontSize: "16px",
+    height: "30px",
+    width: "100%",
   },
   thumbnail: {
     objectFit: "contain",
     boxShadow: "0px 0px 3px 3px rgba(0, 0, 0, 0.6)",
   },
   imageContainer: {
+    boxSizing: "border-box",
     display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
+    gridTemplateColumns: "auto auto auto", // Adjust min size as needed
     gridTemplateRows: "auto",
     gridAutoFlow: "row",
     gap: "10px",
-    margin: "20px 0px 20px 0px",
-    height: "100%",
-    width: "100%",
     overflow: "auto",
-    padding: "10px",
   },
   imgHolder: {
     position: "relative",
