@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
 from typing import List
-from image_transformer import rotate_image
-from image_utils import get_image_json, extract_subimage_by_coordinates, get_images_after_splitting
+from image_utils import get_image_json, get_images_after_splitting, extract_subimage_by_coordinates, read_and_decode_image
 import logging
 
 logging.basicConfig(level=logging.INFO,
@@ -15,30 +14,26 @@ class ImageProcessor:
         self.results = []
 
     def process_images(self, image_files: List) -> List:
-        for pic_index, pic in enumerate(image_files):
+        for scanned_image_index, scanned_image in enumerate(image_files):
             logger.info(
-                f'Working on {pic.filename}: {pic_index + 1} of {len(image_files)}')
-            img = self.read_and_decode_image(pic)
-            if img is not None:
-                self.process_single_image(img, pic)
+                f'Working on {scanned_image.filename}: {scanned_image_index + 1} of {len(image_files)}')
+            try:
+                scanned_image_np = read_and_decode_image(scanned_image)
+                if scanned_image_np is not None:
+                    self.process_single_image(
+                        scanned_image_np, scanned_image.filename)
+            except Exception as e:
+                logger.error(
+                    f'Failed to read or decode {scanned_image.filename}: {e}')
         return self.results
 
-    def read_and_decode_image(self, pic) -> np.ndarray:
-        try:
-            npimg = np.frombuffer(pic.read(), np.uint8)
-            img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
-            return img
-        except Exception as e:
-            logger.error(f'Failed to read or decode {pic.filename}: {e}')
-            return None
-
-    def process_single_image(self, img: np.ndarray, pic) -> None:
-        image_coordinates = get_images_after_splitting(img)
+    def process_single_image(self, scanned_image_np: np.ndarray, filename) -> None:
+        image_coordinates = get_images_after_splitting(scanned_image_np)
         for index, coordinates in enumerate(image_coordinates):
             try:
-                curr_image = extract_subimage_by_coordinates(img, coordinates)
-                curr_image = rotate_image(curr_image)
+                curr_image = extract_subimage_by_coordinates(
+                    scanned_image_np, coordinates)
                 self.results.append(get_image_json(curr_image))
             except Exception as e:
                 logger.error(
-                    f'Error processing {index + 1} from {pic.filename}: {e}')
+                    f'Error processing {index + 1} from {filename}: {e}')
