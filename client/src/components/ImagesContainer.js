@@ -52,7 +52,7 @@ const styles = {
   imageContainer: {
     boxSizing: "border-box",
     display: "grid",
-    gridTemplateColumns: "auto auto auto", // Adjust min size as needed
+    gridTemplateColumns: "auto auto auto",
     gridTemplateRows: "auto",
     gridAutoFlow: "row",
     gap: "10px",
