@@ -4,11 +4,9 @@ import base64
 import math
 from scipy.optimize import minimize
 
-
-SPLIT_THRESHOLD = 200
-CORNER_THRESHOLD = 235
+CORNER_THRESHOLD = 200
 WHITE_COLOR = (255, 255, 255)
-PAD_RATIO = 0.1
+PAD_RATIO = 0.02
 MIN_OBJECT_RATIO = 0.1
 THUMBNAIL_MAX_DIMENSION = 200
 
@@ -55,7 +53,7 @@ def get_images_after_splitting(img):
     pad_height, pad_width = int(height * PAD_RATIO), int(width * PAD_RATIO)
     img_with_border = add_border_to_image(img, pad_height, pad_width)
     contours = find_contours_in_range(
-        img_with_border, SPLIT_THRESHOLD, WHITE_COLOR[0])
+        img_with_border, CORNER_THRESHOLD, WHITE_COLOR[0])
     rectangles = [create_rectangle_from_contour(cnt) for cnt in contours if create_rectangle_from_contour(
         cnt)[2] >= width * MIN_OBJECT_RATIO and create_rectangle_from_contour(cnt)[3] >= height * MIN_OBJECT_RATIO]
     return [(y - pad_height, y - pad_height + h, x - pad_width, x - pad_width + w) for x, y, w, h in rectangles]
@@ -95,8 +93,8 @@ def rotate_image(img):
 
 def optimal_rotation(mask):
     starting_angle = get_starting_angle(mask)
-    result = minimize(pixel_diff, [starting_angle], args=(mask,),  bounds=[(-45, 45)],
-                      options={'finite_diff_rel_step': 0.5, 'accuracy': 0.01, 'eps': 0.1})
+    result = minimize(pixel_diff, [starting_angle], args=(mask,), method='L-BFGS-B', tol=0.01,  bounds=[(-45, 45)],
+                      options={'finite_diff_rel_step': starting_angle, 'eps': starting_angle / 4})
     return result.x[0] if result.success else 0
 
 
@@ -117,21 +115,24 @@ def pixel_diff(angle, img):
 
         ratio = nonpixel_difference / \
             (pixel_difference if pixel_difference != 0 else 1)
-        return ratio * math.copysign(1, angle[0])
+        return ratio
     except Exception as e:
         print(f"Error in pixel_diff: {e}")
         return 1e9
 
 
 def get_starting_angle(mask):
-    left_result = pixel_diff([-0.5], mask)
-    right_result = pixel_diff([0.5], mask)
-    if left_result < right_result:
-        return 0.5
-    elif right_result > left_result:
-        return -0.5
+    POS_ROTATION = 0.5
+    NEG_ROTATION = POS_ROTATION * -1
+    neg_rotation_result = pixel_diff([NEG_ROTATION], mask)
+    pos_rotation_result = pixel_diff([POS_ROTATION], mask)
+    rotation_total = neg_rotation_result + pos_rotation_result
+    if neg_rotation_result < pos_rotation_result:
+        print('neg', (neg_rotation_result / rotation_total) * POS_ROTATION - 1)
+        return (neg_rotation_result / rotation_total) * POS_ROTATION - 1
     else:
-        return 0.5
+        print('pos', (pos_rotation_result / rotation_total) * NEG_ROTATION - 1)
+        return (pos_rotation_result / rotation_total) * NEG_ROTATION + 1
 
 
 def get_mask(img, lower_threshold, upper_threshold):

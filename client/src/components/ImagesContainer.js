@@ -42,7 +42,8 @@ const styles = {
     textAlign: "left",
     color: "rgba(7, 13, 15, 1)",
     fontSize: "16px",
-    height: "30px",
+    height: "40px",
+    marginTop: "30px",
     width: "100%",
   },
   thumbnail: {
