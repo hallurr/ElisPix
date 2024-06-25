@@ -1,12 +1,11 @@
 import cv2
 import numpy as np
 import base64
-import math
 from scipy.optimize import minimize
 
 CORNER_THRESHOLD = 200
 WHITE_COLOR = (255, 255, 255)
-PAD_RATIO = 0.02
+PAD_RATIO = 0.01
 MIN_OBJECT_RATIO = 0.1
 THUMBNAIL_MAX_DIMENSION = 200
 
@@ -28,6 +27,13 @@ def extract_subimage_by_coordinates(image, coordinates):
     subimage = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB)
     subimage = crop_image(subimage)
     rotated_subimage = rotate_image(subimage)
+
+    # subtract 1% from each side to remove border
+    height, width, _ = rotated_subimage.shape
+    # border = int(
+    #    min(rotated_subimage.shape[0], rotated_subimage.shape[1]) * 0.002)
+   # rotated_subimage = rotated_subimage[border:height -
+   #                                    border, border:width - border]
     return rotated_subimage
 
 
@@ -51,12 +57,15 @@ def create_rectangle_from_contour(cnt):
 def get_images_after_splitting(img):
     height, width, _ = img.shape
     pad_height, pad_width = int(height * PAD_RATIO), int(width * PAD_RATIO)
-    img_with_border = add_border_to_image(img, pad_height, pad_width)
+    img_without_border = img[pad_height:height -
+                             pad_height, pad_width:width - pad_width]
+    img_with_border = add_border_to_image(
+        img_without_border, pad_height, pad_width)
     contours = find_contours_in_range(
         img_with_border, CORNER_THRESHOLD, WHITE_COLOR[0])
     rectangles = [create_rectangle_from_contour(cnt) for cnt in contours if create_rectangle_from_contour(
         cnt)[2] >= width * MIN_OBJECT_RATIO and create_rectangle_from_contour(cnt)[3] >= height * MIN_OBJECT_RATIO]
-    return [(y - pad_height, y - pad_height + h, x - pad_width, x - pad_width + w) for x, y, w, h in rectangles]
+    return [(y, y + h, x, x + w) for x, y, w, h in rectangles]
 
 
 def encode_image_to_base64(image):
@@ -93,8 +102,8 @@ def rotate_image(img):
 
 def optimal_rotation(mask):
     starting_angle = get_starting_angle(mask)
-    result = minimize(pixel_diff, [starting_angle], args=(mask,), method='L-BFGS-B', tol=0.01,  bounds=[(-45, 45)],
-                      options={'finite_diff_rel_step': starting_angle, 'eps': starting_angle / 4})
+    result = minimize(pixel_diff, [starting_angle], args=(mask,), method='L-BFGS-B', bounds=[(-45, 45)],
+                      options={'finite_diff_rel_step': starting_angle, 'eps': starting_angle / 2})
     return result.x[0] if result.success else 0
 
 

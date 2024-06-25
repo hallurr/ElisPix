@@ -5,17 +5,13 @@ import {
   useSensors,
   PointerSensor,
 } from "@dnd-kit/core";
-import callAPI from "../helpers/api";
 import Upload from "./../images/Upload.svg";
 
-function ImageUpload({ setAllImages, setIsLoading }) {
+function ImageUpload({ setAllFiles }) {
   const fileInputRef = React.useRef();
   const sensors = useSensors(useSensor(PointerSensor));
   const handleFileChange = (event) => {
-    const images = event.target?.files;
-    if (images.length > 0) {
-      callAPI({ setAllImages, setIsLoading });
-    }
+    setAllFiles(event.target?.files);
   };
 
   return (
@@ -24,7 +20,7 @@ function ImageUpload({ setAllImages, setIsLoading }) {
         style={styles.contentDnd}
         sensors={sensors}
         onDragEnd={() => {
-          callAPI({ setAllImages, setIsLoading });
+          setAllFiles(fileInputRef.current.files);
         }}
       >
         <div style={styles.imageUpload}>

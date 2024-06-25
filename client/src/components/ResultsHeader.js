@@ -3,8 +3,9 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import Clear from "./../images/Clear.svg";
 import Download from "./../images/Download.svg";
+import Refresh from "./../images/Refresh.svg";
 
-function ResultsHeader({ allImages, resetImages, setLoading }) {
+function ResultsHeader({ allImages, clearImages, setLoading, refreshResults }) {
   const downloadAllImages = () => {
     const zip = new JSZip();
     allImages.forEach((image, index) => {
@@ -21,7 +22,13 @@ function ResultsHeader({ allImages, resetImages, setLoading }) {
       <div style={styles.container}>
         <div style={styles.leftHeader}></div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={resetImages} style={styles.resetButton}>
+          <button onClick={refreshResults} style={styles.resetButton}>
+            <div style={{ marginRight: "8px", color: "black" }}>
+              Reprocess images
+            </div>
+            <img src={Refresh} alt="Refresh" />
+          </button>
+          <button onClick={clearImages} style={styles.resetButton}>
             <div style={{ marginRight: "8px", color: "black" }}>
               Clear results
             </div>

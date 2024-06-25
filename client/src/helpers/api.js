@@ -1,8 +1,8 @@
-const callAPI = ({ setAllImages, setIsLoading }) => {
+const callAPI = ({ setAllImages, setIsLoading, files }) => {
   setIsLoading({ loading: true, text: "Processing images ..." });
   setAllImages([]);
   const formData = new FormData();
-  const images = document.getElementById("image-input").files;
+  let images = files;
 
   for (let i = 0; i < images.length; i++) {
     formData.append("images", images[i]);

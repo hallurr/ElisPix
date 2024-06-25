@@ -5,11 +5,25 @@ import ImageUpload from "./components/ImageUpload";
 import "./App.css";
 import Header from "./images/Header.svg";
 import Loader from "./components/Loader";
+import callAPI from "./helpers/api";
+
+const sendToApi = (files, setAllImages, setIsLoading) => {
+  callAPI({ setAllImages, setIsLoading, files });
+};
 
 function App() {
   const [allImages, setAllImages] = useState([]);
+  const [allFiles, setAllFiles] = useState([]);
   const [isLoading, setIsLoading] = useState({ loading: false, text: "" });
   const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    sendToApi(allFiles, setAllImages, setIsLoading);
+  }, [allFiles]);
+
+  const refreshResults = () => {
+    sendToApi(allFiles, setAllImages, setIsLoading);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -35,20 +49,18 @@ function App() {
         />
         <ResultsHeader
           allImages={allImages}
-          resetImages={() => {
+          clearImages={() => {
             setAllImages([]);
           }}
           setLoading={setIsLoading}
+          refreshResults={refreshResults}
         />
       </div>
       <div className="content">
         {isLoading.loading && <Loader text={isLoading.text} />}
         {!isLoading.loading &&
           (allImages.length === 0 ? (
-            <ImageUpload
-              setAllImages={setAllImages}
-              setIsLoading={setIsLoading}
-            />
+            <ImageUpload setAllFiles={setAllFiles} />
           ) : (
             <ImagesContainer displayedImages={allImages} />
           ))}
