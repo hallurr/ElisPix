@@ -11,21 +11,33 @@ THUMBNAIL_MAX_DIMENSION = 200
 
 
 def crop_image(img):
-    for _ in range(4):
-        while np.all(img[0] >= CORNER_THRESHOLD):
-            img = img[1:]
-        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-    return img
+    # Find first index where all pixels are not white
+    img_bw = np.mean(img, axis=2)
+    cols_over = np.where(np.all(img_bw > CORNER_THRESHOLD, axis=0))[0]   
+    rows_over = np.where(np.all(img_bw > CORNER_THRESHOLD, axis=1))[0]
+    # take the indexes that are not in the rows_over_220 and cols_over_220
+    img_clean = img[~np.isin(np.arange(img_bw.shape[0]), rows_over), :,:]
+    img_clean = img_clean[:, ~np.isin(np.arange(img_bw.shape[1]), cols_over),:]
+    
+    # for _ in range(4):
+    #     while np.all(img[0] >= CORNER_THRESHOLD):
+    #         img = img[1:]
+    #     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+    return img_clean
 
 
 def add_border_to_image(img, pad_height, pad_width):
     return cv2.copyMakeBorder(img, pad_height, pad_height, pad_width, pad_width, cv2.BORDER_CONSTANT, value=WHITE_COLOR)
 
 
-def extract_subimage_by_coordinates(image, coordinates):
+def extract_subimage_by_coordinates(image, coordinates, simple_anglefinder=False):
     y1, y2, x1, x2 = coordinates
     subimage = cv2.cvtColor(image[y1:y2, x1:x2], cv2.COLOR_BGR2RGB)
-    rotated_subimage = rotate_image(subimage)
+    if simple_anglefinder:
+        angle = find_angle(subimage)
+        rotated_subimage = rotate_image(subimage, angle=angle)
+    else:
+        rotated_subimage = rotate_image(subimage)
 
     # subtract 1% from each side to remove border
     # height, width, _ = rotated_subimage.shape
@@ -84,9 +96,10 @@ def generate_thumbnail(image):
     return cv2.resize(image, None, fx=scale, fy=scale)
 
 
-def rotate_image(img):
+def rotate_image(img, angle=None):
     mask = get_mask(img, CORNER_THRESHOLD, 255)
-    angle = optimal_rotation(mask)
+    if angle is None:
+        angle = optimal_rotation(mask)
     M = cv2.getRotationMatrix2D(
         (img.shape[1] / 2, img.shape[0] / 2), angle, 1)
     img = cv2.warpAffine(
@@ -163,3 +176,18 @@ def read_and_decode_image(scanned_image) -> np.ndarray:
     npimg = np.frombuffer(scanned_image.read(), np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
     return img
+
+def find_angle(image):
+    angle_OG = 20
+    M = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), angle_OG, 1)
+    img = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]), borderValue=(255, 255, 255))
+    mask = cv2.inRange(img, (CORNER_THRESHOLD, CORNER_THRESHOLD, CORNER_THRESHOLD), (255, 255, 255))
+    angles = []
+    for i in range(4):
+        mask = cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE)
+        sideA_length = np.argmax(mask[0, :] == 0)
+        sideB_length = np.argmax(mask[:, 0] == 0)
+        sideC_length = np.sqrt(sideA_length ** 2 + sideB_length ** 2)
+        angle = angle_OG - (np.arccos(sideA_length / sideC_length) * 180 / np.pi)
+        angles.append(angle)
+    return np.median(angles)

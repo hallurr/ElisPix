@@ -33,7 +33,7 @@ class ImageProcessor:
             for index, coordinates in enumerate(image_coordinates):
                 try:
                     curr_image = extract_subimage_by_coordinates(
-                        self.scanned_img_np, coordinates)
+                        self.scanned_img_np, coordinates, simple_anglefinder=True)
                     self.results.append(get_image_json(curr_image))
                 except Exception as e:
                     self.log_processing_error(index, e)
