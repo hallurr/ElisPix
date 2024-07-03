@@ -3,6 +3,8 @@ import numpy as np
 import base64
 from scipy.optimize import minimize
 
+CROP_THRESHOLD = 160
+SPLIT_THRESHOLD = 220
 CORNER_THRESHOLD = 220
 WHITE_COLOR = (255, 255, 255)
 PAD_RATIO = 0.01
@@ -11,19 +13,16 @@ THUMBNAIL_MAX_DIMENSION = 200
 
 
 def crop_image(img):
-    # Find first index where all pixels are not white
+    mask = get_mask(img, CROP_THRESHOLD, 255)
+    # Convert image to grayscale by averaging the color channels
     img_bw = np.mean(img, axis=2)
-    cols_over = np.where(np.all(img_bw > CORNER_THRESHOLD, axis=0))[0]   
-    rows_over = np.where(np.all(img_bw > CORNER_THRESHOLD, axis=1))[0]
-    # take the indexes that are not in the rows_over_220 and cols_over_220
-    img_clean = img[~np.isin(np.arange(img_bw.shape[0]), rows_over), :,:]
-    img_clean = img_clean[:, ~np.isin(np.arange(img_bw.shape[1]), cols_over),:]
-    
-    # for _ in range(4):
-    #     while np.all(img[0] >= CORNER_THRESHOLD):
-    #         img = img[1:]
-    #     img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-    return img_clean
+    # Find columns and rows where not all pixels are above the threshold
+    cols_to_keep = np.where(np.any(img_bw <= CROP_THRESHOLD, axis=0))[0]
+    rows_to_keep = np.where(np.any(img_bw <= CROP_THRESHOLD, axis=1))[0]
+    # Crop the image to keep only the desired rows and columns
+    img_cropped = img[np.min(rows_to_keep):np.max(
+        rows_to_keep)+1, np.min(cols_to_keep):np.max(cols_to_keep)+1, :]
+    return img_cropped
 
 
 def add_border_to_image(img, pad_height, pad_width):
@@ -40,9 +39,11 @@ def extract_subimage_by_coordinates(image, coordinates, simple_anglefinder=False
         rotated_subimage = rotate_image(subimage)
 
     # subtract 1% from each side to remove border
-    # height, width, _ = rotated_subimage.shape
-    # border = int(min(rotated_subimage.shape[0], rotated_subimage.shape[1]) * 0.002)
-    # rotated_subimage = rotated_subimage[border:height - border, border:width - border]
+    height, width, _ = rotated_subimage.shape
+    border = int(
+        min(rotated_subimage.shape[0], rotated_subimage.shape[1]) * 0.007)
+    rotated_subimage = rotated_subimage[border:height -
+                                        border, border:width - border]
     return rotated_subimage
 
 
@@ -63,6 +64,13 @@ def create_rectangle_from_contour(cnt):
     return cv2.boundingRect(np.int0(box))
 
 
+def is_rectangle_inside(rect1, rect2):
+    x1, y1, w1, h1 = rect1
+    x2, y2, w2, h2 = rect2
+    return (x2 <= x1 < x2 + w2) and (x2 < x1 + w1 <= x2 + w2) and \
+           (y2 <= y1 < y2 + h2) and (y2 < y1 + h1 <= y2 + h2)
+
+
 def get_images_after_splitting(img):
     height, width, _ = img.shape
     pad_height, pad_width = int(height * PAD_RATIO), int(width * PAD_RATIO)
@@ -71,10 +79,14 @@ def get_images_after_splitting(img):
     img_with_border = add_border_to_image(
         img_without_border, pad_height, pad_width)
     contours = find_contours_in_range(
-        img_with_border, CORNER_THRESHOLD, WHITE_COLOR[0])
+        img_with_border, SPLIT_THRESHOLD, WHITE_COLOR[0])
     rectangles = [create_rectangle_from_contour(cnt) for cnt in contours if create_rectangle_from_contour(
         cnt)[2] >= width * MIN_OBJECT_RATIO and create_rectangle_from_contour(cnt)[3] >= height * MIN_OBJECT_RATIO]
-    return [(y, y + h, x, x + w) for x, y, w, h in rectangles]
+    filtered_rectangles = []
+    for rect in rectangles:
+        if not any(is_rectangle_inside(rect, other_rect) for other_rect in rectangles if rect != other_rect):
+            filtered_rectangles.append(rect)
+    return [(y, y + h, x, x + w) for x, y, w, h in filtered_rectangles]
 
 
 def encode_image_to_base64(image):
@@ -82,11 +94,12 @@ def encode_image_to_base64(image):
     return base64.b64encode(buffer).decode('utf-8')
 
 
-def get_image_json(image):
+def get_image_json(image, filename):
     thumbnail = generate_thumbnail(image)
     return {
         "image": encode_image_to_base64(image),
-        "thumbnail": encode_image_to_base64(thumbnail)
+        "thumbnail": encode_image_to_base64(thumbnail),
+        "filename": filename
     }
 
 
@@ -123,7 +136,6 @@ def pixel_diff(angle, mask):
         [1 for col in rotated_mask.T if np.mean(col == 255) >= white_threshold])
     maxerror = rotated_mask.shape[0] + rotated_mask.shape[1]
     loss = 1 - (allwhiterowcount + allwhitecolcount) / maxerror
-    print('Loss', loss)
     return loss
 
 
@@ -131,7 +143,6 @@ def optimal_rotation(mask):
     starting_angle = get_starting_angle(mask)
     result = minimize(pixel_diff, [starting_angle], args=(mask,), method='L-BFGS-B', bounds=[(-45, 45)],
                       options={'finite_diff_rel_step': starting_angle, 'eps': starting_angle / 2})
-    print('Result', result.x[0])
     return result.x[0] if result.success else 0
 
 
@@ -177,17 +188,22 @@ def read_and_decode_image(scanned_image) -> np.ndarray:
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
     return img
 
+
 def find_angle(image):
     angle_OG = 20
-    M = cv2.getRotationMatrix2D((image.shape[1] / 2, image.shape[0] / 2), angle_OG, 1)
-    img = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]), borderValue=(255, 255, 255))
-    mask = cv2.inRange(img, (CORNER_THRESHOLD, CORNER_THRESHOLD, CORNER_THRESHOLD), (255, 255, 255))
+    M = cv2.getRotationMatrix2D(
+        (image.shape[1] / 2, image.shape[0] / 2), angle_OG, 1)
+    img = cv2.warpAffine(
+        image, M, (image.shape[1], image.shape[0]), borderValue=(255, 255, 255))
+    mask = cv2.inRange(
+        img, (CORNER_THRESHOLD, CORNER_THRESHOLD, CORNER_THRESHOLD), (255, 255, 255))
     angles = []
-    for i in range(4):
+    for _ in range(4):
         mask = cv2.rotate(mask, cv2.ROTATE_90_CLOCKWISE)
         sideA_length = np.argmax(mask[0, :] == 0)
         sideB_length = np.argmax(mask[:, 0] == 0)
         sideC_length = np.sqrt(sideA_length ** 2 + sideB_length ** 2)
-        angle = angle_OG - (np.arccos(sideA_length / sideC_length) * 180 / np.pi)
+        angle = angle_OG - \
+            (np.arccos(sideA_length / sideC_length) * 180 / np.pi)
         angles.append(angle)
     return np.median(angles)

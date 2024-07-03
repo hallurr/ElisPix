@@ -8,8 +8,8 @@ import Refresh from "./../images/Refresh.svg";
 function ResultsHeader({ allImages, clearImages, setLoading, refreshResults }) {
   const downloadAllImages = () => {
     const zip = new JSZip();
-    allImages.forEach((image, index) => {
-      zip.file(`image${index + 1}.png`, image.image, { base64: true });
+    allImages.forEach((image, _) => {
+      zip.file(`${image.filename}.png`, image.image, { base64: true });
     });
     zip.generateAsync({ type: "blob" }).then((content) => {
       saveAs(content, "images.zip");

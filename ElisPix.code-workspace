@@ -1,0 +1,63 @@
+{
+  "folders": [
+    {
+      "path": "server/"
+    },
+    {
+      "path": "client/"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/__pycache__": true,
+      ".venv/**": true,
+      "__pycache__": true
+    }
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start Flask Server",
+        "type": "shell",
+        "command": "python",
+        "args": ["${workspaceFolder:server}/app.py"],
+        "options": {
+          "cwd": "${workspaceFolder:server}"
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Start React Development Server",
+        "type": "shell",
+        "command": "npm",
+        "args": ["start"],
+        "options": {
+          "cwd": "${workspaceFolder:client}"
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": [],
+        "isBackground": true
+      },
+      {
+        "label": "Start Both Servers",
+        "dependsOn": ["Start Flask Server", "Start React Development Server"],
+        "presentation": {
+          "reveal": "always"
+        },
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
+}
